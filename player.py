@@ -1,391 +1,202 @@
 import random
+from typing import List, Dict, Optional
 from box import Box
-from typing import List
 
-
-def line_boxes(mat, line) -> List[Box]:
+def get_line_boxes(matrix: List[List[Box]], line: List[tuple[int, int]]) -> List[Box]:
     p1, p2 = line
     boxes = []
-    if p1[0] == p2[0]:  # horizontal
-        pos1 = min(p1, p2, key=lambda x: x[1])
-        if pos1[0] > 0:
-            box_top = mat[pos1[0] - 1][pos1[1]]
-            boxes.append(box_top)
-        if pos1[0] < len(mat):
-            box_bottom = mat[pos1[0]][pos1[1]]
-            boxes.append(box_bottom)
-    else:
-        pos1 = min(p1, p2, key=lambda x: x[0])
-        if pos1[1] > 0:
-            box_left = mat[pos1[0]][pos1[1] - 1]
-            boxes.append(box_left)
-        if pos1[1] < len(mat[0]):
-            box_right = mat[pos1[0]][pos1[1]]
-            boxes.append(box_right)
+    if p1[0] == p2[0]:  # horizontal line
+        y_min = min(p1[1], p2[1])
+        if p1[0] > 0:
+            boxes.append(matrix[p1[0] - 1][y_min])
+        if p1[0] < len(matrix) - 1:
+            boxes.append(matrix[p1[0]][y_min])
+    else:  # vertical line
+        x_min = min(p1[0], p2[0])
+        if p1[1] > 0:
+            boxes.append(matrix[x_min][p1[1] - 1])
+        if p1[1] < len(matrix[0]) - 1:
+            boxes.append(matrix[x_min][p1[1]])
     return boxes
 
+def get_adjacent_boxes(matrix: List[List[Box]], box: Box) -> Dict[str, Optional[Box]]:
+    adjacent = {'top': None, 'bottom': None, 'left': None, 'right': None}
+    x, y = box.idx
+    if x > 0:
+        adjacent['top'] = matrix[x - 1][y]
+    if x < len(matrix) - 1:
+        adjacent['bottom'] = matrix[x + 1][y]
+    if y > 0:
+        adjacent['left'] = matrix[x][y - 1]
+    if y < len(matrix[0]) - 1:
+        adjacent['right'] = matrix[x][y + 1]
+    return adjacent
 
-def get_boxes_around(box_mat, box: Box):
-    boxes = {'top': None, 'bottom': None, 'left': None, 'right': None}
-    if box.idx[0] > 0:
-        boxes['top'] = box_mat[box.idx[0] - 1][box.idx[1]]
-    if box.idx[0] < len(box_mat) - 1:
-        boxes['bottom'] = box_mat[box.idx[0] + 1][box.idx[1]]
-    if box.idx[1] > 0:
-        boxes['left'] = box_mat[box.idx[0]][box.idx[1] - 1]
-    if box.idx[1] < len(box_mat[0]) - 1:
-        boxes['right'] = box_mat[box.idx[0]][box.idx[1] + 1]
-    return boxes
-
-
-def num_boxes_around(box_mat, box: Box):
+def count_adjacent_boxes(matrix: List[List[Box]], box: Box) -> int:
     count = 0
-    if box.idx[0] > 0:
+    x, y = box.idx
+    if x > 0:
         count += 1
-    if box.idx[0] < len(box_mat) - 1:
+    if x < len(matrix) - 1:
         count += 1
-    if box.idx[1] > 0:
+    if y > 0:
         count += 1
-    if box.idx[1] < len(box_mat[0]) - 1:
+    if y < len(matrix[0]) - 1:
         count += 1
     return count
 
-
-def get_empty(box):
-    if box.top is None:
-        return box.top_idx()
-    elif box.bottom is None:
-        return box.bottom_idx()
-    elif box.left is None:
-        return box.left_idx()
-    else:
-        return box.right_idx()
-
-
-def get_rand_empty(box, exclude=None):
+def get_random_empty_side(box: Box, exclude: Optional[tuple[int, int]] = None) -> Optional[tuple[int, int]]:
     choices = []
-    if box.top is None:
-        if exclude is None or box.top_idx() != exclude:
-            choices.append(box.top_idx())
-    if box.bottom is None:
-        if exclude is None or box.bottom_idx() != exclude:
-            choices.append(box.bottom_idx())
-    if box.left is None:
-        if exclude is None or box.left_idx() != exclude:
-            choices.append(box.left_idx())
-    if box.right is None:
-        if exclude is None or box.right_idx() != exclude:
-            choices.append(box.right_idx())
-    return random.choice(choices)
+    if box.top is None and (exclude is None or box.top_idx() != exclude):
+        choices.append(box.top_idx())
+    if box.bottom is None and (exclude is None or box.bottom_idx() != exclude):
+        choices.append(box.bottom_idx())
+    if box.left is None and (exclude is None or box.left_idx() != exclude):
+        choices.append(box.left_idx())
+    if box.right is None and (exclude is None or box.right_idx() != exclude):
+        choices.append(box.right_idx())
+    return random.choice(choices) if choices else None
 
-
-def get_sides_box(box_mat, box: Box):
+def get_side_counts(matrix: List[List[Box]], box: Box) -> Dict[str, Optional[int]]:
     sides = {'top': None, 'bottom': None, 'left': None, 'right': None}
-    if box.idx[0] > 0:
-        sides['top'] = box_mat[box.idx[0] - 1][box.idx[1]].sides
-    if box.idx[0] < len(box_mat) - 1:
-        sides['bottom'] = box_mat[box.idx[0] + 1][box.idx[1]].sides
-    if box.idx[1] > 0:
-        sides['left'] = box_mat[box.idx[0]][box.idx[1] - 1].sides
-    if box.idx[1] < len(box_mat[0]) - 1:
-        sides['right'] = box_mat[box.idx[0]][box.idx[1] + 1].sides
+    x, y = box.idx
+    if x > 0:
+        sides['top'] = matrix[x - 1][y].sides
+    if x < len(matrix) - 1:
+        sides['bottom'] = matrix[x + 1][y].sides
+    if y > 0:
+        sides['left'] = matrix[x][y - 1].sides
+    if y < len(matrix[0]) - 1:
+        sides['right'] = matrix[x][y + 1].sides
     return sides
 
+def is_side_less_than(matrix: List[List[Box]], box: Box, side: str, num: int) -> bool:
+    sides = get_side_counts(matrix, box)[side]
+    return sides is None or sides < num
 
-def less_than_sides(box_mat, box: Box, side, num):
-    sides = get_sides_box(box_mat, box)[side]
-    if side == 'top' and box.top is not None:
-        return False
-    if side == 'bottom' and box.bottom is not None:
-        return False
-    if side == 'left' and box.left is not None:
-        return False
-    if side == 'right' and box.right is not None:
-        return False
-    if sides is None:
-        return True
-    return sides < num
+def is_facing_outside(matrix: List[List[Box]], box: Box) -> bool:
+    x, y = box.idx
+    return (
+        (x == 0 and box.top is None) or
+        (x == len(matrix) - 1 and box.bottom is None) or
+        (y == 0 and box.left is None) or
+        (y == len(matrix[0]) - 1 and box.right is None)
+    )
 
-
-def facing_out(box_mat, box: Box):
-    if box.idx[0] == 0 and box.top is None:
-        return True
-    if box.idx[0] == len(box_mat) - 1 and box.bottom is None:
-        return True
-    if box.idx[1] == 0 and box.left is None:
-        return True
-    if box.idx[1] == len(box_mat[0]) - 1 and box.right is None:
-        return True
-    return False
-
-
-def easy(box_mat, prev_line):
-    if prev_line is not None:
-        prev_boxes = line_boxes(box_mat, prev_line)
-
-        for prev_box in prev_boxes:
+def easy_strategy(matrix: List[List[Box]], prev_line: Optional[List[tuple[int, int]]]) -> Optional[tuple[int, int]]:
+    if prev_line:
+        for prev_box in get_line_boxes(matrix, prev_line):
             if prev_box.sides == 3:
-                return get_rand_empty(prev_box)
+                return get_random_empty_side(prev_box)
 
     boxes = Box.ALL_BOXES
-    box0 = list(filter(lambda x: x.sides == 0, boxes))
-    box1 = list(filter(lambda x: x.sides == 1, boxes))
-    box2 = list(filter(lambda x: x.sides == 2, boxes))
-    box3 = list(filter(lambda x: x.sides == 3, boxes))
-
+    box3 = [box for box in boxes if box.sides == 3]
     if box3:
-        return get_rand_empty(random.choice(box3))
-    if box0:
-        return get_rand_empty(random.choice(box0))
-    if box1:
-        return get_rand_empty(random.choice(box1))
-    if box2:
-        return get_rand_empty(random.choice(box2))
+        return get_random_empty_side(random.choice(box3))
 
+    box0 = [box for box in boxes if box.sides == 0]
+    box1 = [box for box in boxes if box.sides == 1]
+    box2 = [box for box in boxes if box.sides == 2]
 
-def medium(box_mat, prev_line):
-    if prev_line is not None:
-        prev_boxes = line_boxes(box_mat, prev_line)
+    for box_list in [box0, box1, box2]:
+        if box_list:
+            return get_random_empty_side(random.choice(box_list))
+    return None
 
-        for prev_box in prev_boxes:
+def medium_strategy(matrix: List[List[Box]], prev_line: Optional[List[tuple[int, int]]]) -> Optional[tuple[int, int]]:
+    if prev_line:
+        for prev_box in get_line_boxes(matrix, prev_line):
             if prev_box.sides == 3:
-                return get_rand_empty(prev_box)
+                return get_random_empty_side(prev_box)
 
     boxes = Box.ALL_BOXES
-    box0 = list(filter(lambda x: x.sides == 0, boxes))
-    box1 = list(filter(lambda x: x.sides == 1, boxes))
-    box2 = list(filter(lambda x: x.sides == 2, boxes))
-    box3 = list(filter(lambda x: x.sides == 3, boxes))
+    box0 = [box for box in boxes if box.sides == 0]
+    box1 = [box for box in boxes if box.sides == 1]
+    box2 = [box for box in boxes if box.sides == 2]
+    box3 = [box for box in boxes if box.sides == 3]
 
     box_less2 = box0 + box1
 
     if box3:
-        return get_rand_empty(random.choice(box3))
+        return get_random_empty_side(random.choice(box3))
 
-    top = list(filter(lambda x: less_than_sides(box_mat, x, 'top', 2), box_less2))
-    bottom = list(filter(lambda x: less_than_sides(box_mat, x, 'bottom', 2), box_less2))
-    left = list(filter(lambda x: less_than_sides(box_mat, x, 'left', 2), box_less2))
-    right = list(filter(lambda x: less_than_sides(box_mat, x, 'right', 2), box_less2))
+    sides_to_check = ['top', 'bottom', 'left', 'right']
     choices = []
-    choices.extend([i.top_idx() for i in top])
-    choices.extend([i.bottom_idx() for i in bottom])
-    choices.extend([i.left_idx() for i in left])
-    choices.extend([i.right_idx() for i in right])
+    for side in sides_to_check:
+        choices.extend([
+            getattr(box, f"{side}_idx")()
+            for box in box_less2 if is_side_less_than(matrix, box, side, 2)
+        ])
+    
     if choices:
         return random.choice(choices)
 
-    if box0:
-        return get_rand_empty(random.choice(box0))
-    if box1:
-        return get_rand_empty(random.choice(box1))
-    if box2:
-        return get_rand_empty(random.choice(box2))
+    for box_list in [box0, box1, box2]:
+        if box_list:
+            return get_random_empty_side(random.choice(box_list))
+    return None
 
-
-def hard(box_mat, prev_line):
-    if prev_line is not None:
-        prev_boxes = line_boxes(box_mat, prev_line)
-
-        for prev_box in prev_boxes:
+def hard_strategy(matrix: List[List[Box]], prev_line: Optional[List[tuple[int, int]]]) -> Optional[tuple[int, int]]:
+    if prev_line:
+        for prev_box in get_line_boxes(matrix, prev_line):
             if prev_box.sides == 3:
-                return get_rand_empty(prev_box)
+                return get_random_empty_side(prev_box)
 
     boxes = Box.ALL_BOXES
-    box0 = list(filter(lambda x: x.sides == 0, boxes))
-    box1 = list(filter(lambda x: x.sides == 1, boxes))
-    box3 = list(filter(lambda x: x.sides == 3, boxes))
+    box0 = [box for box in boxes if box.sides == 0]
+    box1 = [box for box in boxes if box.sides == 1]
+    box3 = [box for box in boxes if box.sides == 3]
 
     if box3:
-        return get_rand_empty(random.choice(box3))
+        return get_random_empty_side(random.choice(box3))
 
     box_less2 = box0 + box1
-
-    top = list(filter(lambda x: less_than_sides(box_mat, x, 'top', 2), box_less2))
-    bottom = list(filter(lambda x: less_than_sides(box_mat, x, 'bottom', 2), box_less2))
-    left = list(filter(lambda x: less_than_sides(box_mat, x, 'left', 2), box_less2))
-    right = list(filter(lambda x: less_than_sides(box_mat, x, 'right', 2), box_less2))
+    sides_to_check = ['top', 'bottom', 'left', 'right']
     choices = []
-    choices.extend([i.top_idx() for i in top])
-    choices.extend([i.bottom_idx() for i in bottom])
-    choices.extend([i.left_idx() for i in left])
-    choices.extend([i.right_idx() for i in right])
+    for side in sides_to_check:
+        choices.extend([
+            getattr(box, f"{side}_idx")()
+            for box in box_less2 if is_side_less_than(matrix, box, side, 2)
+        ])
+
     if choices:
         return random.choice(choices)
 
-    chains = []
-    checked = []
-    crosses = []
-    options = boxes.copy()
+    chains, crosses, checked, options = [], [], [], boxes.copy()
     while len(checked) < len(boxes):
-        current = [options[0]]
-        if current[0].color is not None:
-            checked.append(current[0])
-            options.remove(current[0])
-            continue
-        if current[0].sides < 2:
+        current = [options.pop(0)]
+        if current[0].color or current[0].sides < 2:
             crosses.append(current[0])
             checked.append(current[0])
-            options.remove(current[0])
             continue
-        new = []
+
         chain = []
         while current:
             for box in current:
                 checked.append(box)
                 chain.append(box)
-                options.remove(box)
-                around = get_boxes_around(box_mat, box)
-                if box.top is None and around['top'] is not None:
-                    if around['top'] not in new and around['top'] not in chain:
-                        if around['top'].sides >= 2:
-                            new.append(around['top'])
-                if box.bottom is None and around['bottom'] is not None:
-                    if around['bottom'] not in new and around['bottom'] not in chain:
-                        if around['bottom'].sides >= 2:
-                            new.append(around['bottom'])
-                if box.left is None and around['left'] is not None:
-                    if around['left'] not in new and around['left'] not in chain:
-                        if around['left'].sides >= 2:
-                            new.append(around['left'])
-                if box.right is None and around['right'] is not None:
-                    if around['right'] not in new and around['right'] not in chain:
-                        if around['right'].sides >= 2:
-                            new.append(around['right'])
-            current = new
-            new = []
+                around = get_adjacent_boxes(matrix, box)
+                for direction in ['top', 'bottom', 'left', 'right']:
+                    if getattr(box, direction) is None and around[direction]:
+                        adj_box = around[direction]
+                        if adj_box not in chain and adj_box not in current:
+                            if adj_box.sides >= 2:
+                                current.append(adj_box)
+            current = [b for b in current if b not in chain]
         chains.append(chain)
 
-    sorted_chains = sorted(chains, key=lambda x: len(x))
+    if chains:
+        sorted_chains = sorted(chains, key=len)
+        if sorted_chains:
+            return get_random_empty_side(random.choice(sorted_chains[0]))
 
-    if sorted_chains:
-        return get_rand_empty(random.choice(sorted_chains[0]))
+    return get_random_empty_side(random.choice(crosses))
 
-    return get_rand_empty(random.choice(crosses))
-
-
-def extreme(box_mat, prev_line):
+def extreme_strategy(matrix: List[List[Box]], prev_line: Optional[List[tuple[int, int]]]) -> Optional[tuple[int, int]]:
     boxes = Box.ALL_BOXES
-    box0 = list(filter(lambda x: x.sides == 0, boxes))
-    box1 = list(filter(lambda x: x.sides == 1, boxes))
-    box3 = list(filter(lambda x: x.sides == 3, boxes))
-
+    box0 = [box for box in boxes if box.sides == 0]
+    box1 = [box for box in boxes if box.sides == 1]
+    box3 = [box for box in boxes if box.sides == 3]
     box_less2 = box0 + box1
 
-    top = list(filter(lambda x: less_than_sides(box_mat, x, 'top', 2), box_less2))
-    bottom = list(filter(lambda x: less_than_sides(box_mat, x, 'bottom', 2), box_less2))
-    left = list(filter(lambda x: less_than_sides(box_mat, x, 'left', 2), box_less2))
-    right = list(filter(lambda x: less_than_sides(box_mat, x, 'right', 2), box_less2))
-    choices = []
-    choices.extend([i.top_idx() for i in top])
-    choices.extend([i.bottom_idx() for i in bottom])
-    choices.extend([i.left_idx() for i in left])
-    choices.extend([i.right_idx() for i in right])
-
-    chains = []
-    checked = []
-    crosses = []
-    options = boxes.copy()
-    while len(checked) < len(boxes):
-        current = [options[0]]
-        if current[0].color is not None:
-            checked.append(current[0])
-            options.remove(current[0])
-            continue
-        if current[0].sides < 2:
-            crosses.append(current[0])
-            checked.append(current[0])
-            options.remove(current[0])
-            continue
-        new = []
-        chain = []
-        while current:
-            for box in current:
-                checked.append(box)
-                chain.append(box)
-                options.remove(box)
-                around = get_boxes_around(box_mat, box)
-                if box.top is None and around['top'] is not None:
-                    if around['top'] not in new and around['top'] not in chain:
-                        if around['top'].sides >= 2:
-                            new.append(around['top'])
-                if box.bottom is None and around['bottom'] is not None:
-                    if around['bottom'] not in new and around['bottom'] not in chain:
-                        if around['bottom'].sides >= 2:
-                            new.append(around['bottom'])
-                if box.left is None and around['left'] is not None:
-                    if around['left'] not in new and around['left'] not in chain:
-                        if around['left'].sides >= 2:
-                            new.append(around['left'])
-                if box.right is None and around['right'] is not None:
-                    if around['right'] not in new and around['right'] not in chain:
-                        if around['right'].sides >= 2:
-                            new.append(around['right'])
-            current = new
-            new = []
-        chains.append(chain)
-
-    sorted_chains = sorted(chains, key=lambda x: len(x))
-
-    if prev_line is not None:
-        prev_boxes = line_boxes(box_mat, prev_line)
-
-        for prev_box in prev_boxes:
-            if prev_box.sides == 3:
-                side = get_rand_empty(prev_box)
-                if not choices and len(sorted_chains) > 1:
-                    if len(sorted_chains[1]) > 2 and len(box3) < 2:
-                        side_boxes = line_boxes(box_mat, side)
-                        for box in side_boxes:
-                            if box != prev_box:
-                                if num_boxes_around(box_mat, box) < 4 and facing_out(box_mat, box):
-                                    return get_rand_empty(box, exclude=side)
-                return side
-
-    if box3:
-        b = random.choice(box3)
-        side = get_rand_empty(b)
-        if not choices and len(sorted_chains) > 1:
-            if len(sorted_chains[1]) > 2 and len(box3) < 2:
-                side_boxes = line_boxes(box_mat, side)
-                for box in side_boxes:
-                    if box != b:
-                        if num_boxes_around(box_mat, box) < 4 and facing_out(box_mat, box):
-                            return get_rand_empty(box, exclude=side)
-        return side
-
-    if choices:
-        return random.choice(choices)
-
-    if sorted_chains:
-        return get_rand_empty(random.choice(sorted_chains[0]))
-
-    return get_rand_empty(random.choice(crosses))
-
-
-def expert(box_mat, prev_line):
-    pass  # coming soon
-
-
-class Player:
-    def __init__(self, player_type, color, difficulty=1):
-        self.player_type = player_type
-        self.score = 0
-        self.color = color
-        self.start = None
-        self.move = None
-        self.difficulty = difficulty
-
-    def get_move(self, box_mat, prev_line):
-        if self.player_type == 'human':
-            m = self.move
-            self.move = None
-            return m
-
-        if self.difficulty == 1:
-            return easy(box_mat, prev_line)
-        elif self.difficulty == 2:
-            return medium(box_mat, prev_line)
-        elif self.difficulty == 3:
-            return hard(box_mat, prev_line)
-        elif self.difficulty == 4:
-            return extreme(box_mat, prev_line)
+    sides_to_check = ['
